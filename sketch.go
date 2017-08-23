@@ -73,6 +73,7 @@ func (sk *Sketch) Incr(dat []byte) (min Type) {
 
 func (sk *Sketch) Add(dat []byte, cnt Type) (min Type) {
 	min = Max
+	// reference: https://github.com/addthis/stream-lib/blob/master/src/main/java/com/clearspring/analytics/stream/membership/Filter.java
 	hash1 := murmur3.Sum32WithSeed(dat, 0)
 	hash2 := murmur3.Sum32WithSeed(dat, hash1)
 	for i := uint32(0); i < sk.depth; i++ {
