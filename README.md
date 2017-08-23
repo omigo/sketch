@@ -1,2 +1,3 @@
-# cmsketch
+# sketch
+
 Count-Min Sketch

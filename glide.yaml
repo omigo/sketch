@@ -1,0 +1,4 @@
+package: github.com/arstd/sketch
+import:
+- package: github.com/spaolacci/murmur3
+  version: master
