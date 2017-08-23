@@ -84,7 +84,6 @@ func (sk *Sketch) Add(dat []byte, cnt Type) (min Type) {
 			min = v
 		}
 	}
-
 	return min
 }
 
