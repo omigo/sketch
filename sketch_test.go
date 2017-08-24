@@ -1,6 +1,8 @@
 package sketch
 
 import (
+	"encoding/binary"
+	"fmt"
 	"testing"
 
 	"innotechx.com/go-common/misc/random"
@@ -93,5 +95,28 @@ func BenchmarkQuery(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		bs := random.Bytes(16)
 		sk.Query(bs)
+	}
+}
+
+func TestErrors(t *testing.T) {
+	sk := New(WidthDepth(1.0/1e6, 0.0001))
+	fmt.Println(sk.String())
+	bs := make([]byte, 4)
+	for i := uint32(0); i < 1e6; i++ {
+		binary.BigEndian.PutUint32(bs, i)
+		sk.Incr(bs)
+	}
+
+	errors := make([]int, 16)
+	for i := uint32(0); i < 1e6; i++ {
+		binary.BigEndian.PutUint32(bs, i)
+		v := sk.Query(bs)
+		if v != 1 {
+			errors[v]++
+		}
+	}
+
+	for i, e := range errors {
+		fmt.Printf("%2d %d\n", i, e)
 	}
 }
