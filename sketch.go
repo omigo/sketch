@@ -9,9 +9,9 @@ import (
 	"github.com/spaolacci/murmur3"
 )
 
-type Type uint32
+type Type uint16
 
-const Max = math.MaxUint32
+const Max = math.MaxUint16
 
 type Sketch struct {
 	width uint32
@@ -65,6 +65,14 @@ func (sk *Sketch) Depth() uint32 { return sk.depth }
 func (sk *Sketch) String() string {
 	return fmt.Sprintf("Count-Min Sketch(%p): width=%d, depth=%d, mem=%d",
 		sk, sk.width, sk.depth, int64(sk.width)*int64(sk.depth)*int64(unsafe.Sizeof(sk.count[0][0])))
+}
+
+func (sk *Sketch) Clear() {
+	for i := uint32(0); i < sk.depth; i++ {
+		for j := uint32(0); j < sk.width; j++ {
+			sk.count[i][j] = 0
+		}
+	}
 }
 
 func (sk *Sketch) Incr(dat []byte) (min Type) {
