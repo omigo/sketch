@@ -27,23 +27,23 @@ type Sketch struct {
 // https://cs.stackexchange.com/questions/44803/what-is-the-correct-way-to-determine-the-width-and-depth-of-a-count-min-sketch
 //
 // w=⌈2/error⌉
-// d=⌈−ln(1−certainty)/ln(2)⌉
-func WidthDepth(eratio, certainty float64) (width, depth uint32) {
+// d=⌈−ln(uncertainty)/ln(2)⌉  # uncertainty = 1 - certainty
+func WidthDepth(errorRatio, uncertainty float64) (width, depth uint32) {
 	const (
-		defaultEratio    = 1.0 / 1e4
-		defaultCertainty = 1 - 1.0/1e3
+		defaultErrorRatio  = 1.0 / 1e3 // 0.1%
+		defaultUncertainty = 1.0 / 1e3 // 0.1%
 	)
-	if eratio < 1.0/1e9 || eratio > 0.1 {
-		log.Warnf("eratio %g not in [0.000000001,0.1], use default %g", eratio, defaultEratio)
-		eratio = defaultEratio
+	if errorRatio < 1.0/1e9 || errorRatio > 0.1 {
+		log.Warnf("eratio %g not in [1e-9,0.1], use default %g", errorRatio, defaultErrorRatio)
+		errorRatio = defaultErrorRatio
 	}
-	if certainty < 0.9 || certainty > 1-1.0/1e8 {
-		log.Warnf("certainty %g not in [0.9,0.99999999], use default %g", certainty, defaultCertainty)
-		certainty = defaultCertainty
+	if uncertainty < 1.0/1e9 || uncertainty > 0.1 {
+		log.Warnf("certainty %g not in [1e-9,0.1], use default %g", uncertainty, defaultUncertainty)
+		uncertainty = defaultUncertainty
 	}
 
-	width = uint32(math.Ceil(2 / eratio))
-	depth = uint32(math.Ceil(-math.Log(1-certainty) / math.Log(2)))
+	width = uint32(math.Ceil(2 / errorRatio))
+	depth = uint32(math.Ceil(-math.Log(uncertainty) / math.Log(2)))
 	return width, depth
 }
 
