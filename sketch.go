@@ -80,29 +80,41 @@ func (sk *Sketch) Incr(dat []byte) (min Type) {
 }
 
 func (sk *Sketch) Add(dat []byte, cnt Type) (min Type) {
-	min = Max
-	// reference: https://github.com/addthis/stream-lib/blob/master/src/main/java/com/clearspring/analytics/stream/membership/Filter.java
-	hash1 := murmur3.Sum32WithSeed(dat, 0)
-	hash2 := murmur3.Sum32WithSeed(dat, hash1)
+	pos := sk.positions(dat)
+	min = sk.query(pos)
+
+	min += cnt
+
 	for i := uint32(0); i < sk.depth; i++ {
-		pos := (hash1 + i*hash2) % sk.width
-		v := sk.count[i][pos]
-		v += cnt
-		sk.count[i][pos] = v
-		if min > v {
-			min = v
+		v := sk.count[i][pos[i]]
+		if v < min {
+			sk.count[i][pos[i]] = min
 		}
 	}
+
 	return min
 }
 
 func (sk *Sketch) Query(dat []byte) (min Type) {
-	min = Max
+	pos := sk.positions(dat)
+	return sk.query(pos)
+}
+
+func (sk *Sketch) positions(dat []byte) (pos []uint32) {
+	// reference: https://github.com/addthis/stream-lib/blob/master/src/main/java/com/clearspring/analytics/stream/membership/Filter.java
 	hash1 := murmur3.Sum32WithSeed(dat, 0)
 	hash2 := murmur3.Sum32WithSeed(dat, hash1)
+	pos = make([]uint32, sk.depth)
 	for i := uint32(0); i < sk.depth; i++ {
-		pos := (hash1 + i*hash2) % sk.width
-		v := sk.count[i][pos]
+		pos[i] = (hash1 + i*hash2) % sk.width
+	}
+	return pos
+}
+
+func (sk *Sketch) query(pos []uint32) (min Type) {
+	min = Max
+	for i := uint32(0); i < sk.depth; i++ {
+		v := sk.count[i][pos[i]]
 		if min > v {
 			min = v
 		}

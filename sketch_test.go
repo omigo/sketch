@@ -99,7 +99,7 @@ func BenchmarkQuery(b *testing.B) {
 }
 
 func TestErrors(t *testing.T) {
-	sk := New(WidthDepth(1.0/1e6, 0.0001))
+	sk := New(WidthDepth(1.0/1e6, 1e-3))
 	fmt.Println(sk.String())
 	bs := make([]byte, 4)
 	for i := uint32(0); i < 1e6; i++ {
