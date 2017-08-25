@@ -40,8 +40,8 @@ func TestWidthDepth(t *testing.T) {
 func TestSketch(t *testing.T) {
 	cases := []struct {
 		dat   []byte
-		cnt   Type
-		times Type
+		cnt   CountType
+		times CountType
 	}{
 		{[]byte("notfound"), 1, 0},
 		{[]byte("hello"), 1, 1},
@@ -60,7 +60,7 @@ func TestSketch(t *testing.T) {
 	sk := New(WidthDepth(1.0/float64(len(cases)), 0.001))
 	t.Log(sk.String())
 	for _, c := range cases {
-		for j := Type(0); j < c.times; j++ {
+		for j := CountType(0); j < c.times; j++ {
 			sk.Add(c.dat, c.cnt)
 		}
 	}
@@ -74,41 +74,19 @@ func TestSketch(t *testing.T) {
 	}
 }
 
-func BenchmarkIncr(b *testing.B) {
-	sk := New(WidthDepth(1.0/1e6, 0.001))
-	b.Log(sk.String())
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		bs := random.Bytes(16)
-		sk.Incr(bs)
-	}
-}
-
-func BenchmarkQuery(b *testing.B) {
-	sk := New(WidthDepth(1.0/1e6, 0.001))
-	b.Log(sk.String())
-	for i := 0; i < b.N; i++ {
-		bs := random.Bytes(16)
-		sk.Incr(bs)
-	}
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		bs := random.Bytes(16)
-		sk.Query(bs)
-	}
-}
+const nsample = 7e6
 
 func TestErrors(t *testing.T) {
-	sk := New(WidthDepth(1.0/1e6, 1e-3))
+	sk := New(WidthDepth(0.7/7e6, 0.001))
 	fmt.Println(sk.String())
 	bs := make([]byte, 4)
-	for i := uint32(0); i < 1e6; i++ {
+	for i := uint32(0); i < nsample; i++ {
 		binary.BigEndian.PutUint32(bs, i)
 		sk.Incr(bs)
 	}
 
 	errors := make([]int, 16)
-	for i := uint32(0); i < 1e6; i++ {
+	for i := uint32(0); i < nsample; i++ {
 		binary.BigEndian.PutUint32(bs, i)
 		v := sk.Query(bs)
 		if v != 1 {
@@ -118,5 +96,29 @@ func TestErrors(t *testing.T) {
 
 	for i, e := range errors {
 		fmt.Printf("%2d %d\n", i, e)
+	}
+}
+
+func BenchmarkIncr(b *testing.B) {
+	sk := New(WidthDepth(1.0/nsample, 0.001))
+	b.Log(sk.String())
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		bs := random.Bytes(16)
+		sk.Incr(bs)
+	}
+}
+
+func BenchmarkQuery(b *testing.B) {
+	sk := New(WidthDepth(1.0/nsample, 0.001))
+	b.Log(sk.String())
+	for i := 0; i < b.N; i++ {
+		bs := random.Bytes(16)
+		sk.Incr(bs)
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		bs := random.Bytes(16)
+		sk.Query(bs)
 	}
 }

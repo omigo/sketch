@@ -9,14 +9,14 @@ import (
 	"github.com/spaolacci/murmur3"
 )
 
-type Type uint16
+type CountType uint8
 
-const Max = math.MaxUint16
+const Max = ^(CountType(0))
 
 type Sketch struct {
 	width uint32
 	depth uint32
-	count [][]Type
+	count [][]CountType
 }
 
 // WidthDepth returns width and depth by formula in paper.
@@ -34,7 +34,7 @@ func WidthDepth(errorRatio, uncertainty float64) (width, depth uint32) {
 		defaultUncertainty = 1.0 / 1e3 // 0.1%
 	)
 	if errorRatio < 1.0/1e9 || errorRatio > 0.1 {
-		log.Warnf("eratio %g not in [1e-9,0.1], use default %g", errorRatio, defaultErrorRatio)
+		log.Warnf("error ratio %g not in [1e-9,0.1], use default %g", errorRatio, defaultErrorRatio)
 		errorRatio = defaultErrorRatio
 	}
 	if uncertainty < 1.0/1e9 || uncertainty > 0.1 {
@@ -51,10 +51,10 @@ func New(width, depth uint32) (sk *Sketch) {
 	sk = &Sketch{
 		width: width,
 		depth: depth,
-		count: make([][]Type, depth),
+		count: make([][]CountType, depth),
 	}
 	for i := uint32(0); i < depth; i++ {
-		sk.count[i] = make([]Type, width)
+		sk.count[i] = make([]CountType, width)
 	}
 	return sk
 }
@@ -63,8 +63,9 @@ func (sk *Sketch) Width() uint32 { return sk.width }
 func (sk *Sketch) Depth() uint32 { return sk.depth }
 
 func (sk *Sketch) String() string {
-	return fmt.Sprintf("Count-Min Sketch(%p): width=%d, depth=%d, mem=%d",
-		sk, sk.width, sk.depth, int64(sk.width)*int64(sk.depth)*int64(unsafe.Sizeof(sk.count[0][0])))
+	space := float64(int64(sk.width)*int64(sk.depth)*int64(unsafe.Sizeof(sk.count[0][0]))) / 1e6
+	return fmt.Sprintf("Count-Min Sketch(%p): width=%d, depth=%d, mem=%.3fm",
+		sk, sk.width, sk.depth, space)
 }
 
 func (sk *Sketch) Clear() {
@@ -75,11 +76,11 @@ func (sk *Sketch) Clear() {
 	}
 }
 
-func (sk *Sketch) Incr(dat []byte) (min Type) {
+func (sk *Sketch) Incr(dat []byte) (min CountType) {
 	return sk.Add(dat, 1)
 }
 
-func (sk *Sketch) Add(dat []byte, cnt Type) (min Type) {
+func (sk *Sketch) Add(dat []byte, cnt CountType) (min CountType) {
 	pos := sk.positions(dat)
 	min = sk.query(pos)
 
@@ -95,7 +96,7 @@ func (sk *Sketch) Add(dat []byte, cnt Type) (min Type) {
 	return min
 }
 
-func (sk *Sketch) Query(dat []byte) (min Type) {
+func (sk *Sketch) Query(dat []byte) (min CountType) {
 	pos := sk.positions(dat)
 	return sk.query(pos)
 }
@@ -111,7 +112,7 @@ func (sk *Sketch) positions(dat []byte) (pos []uint32) {
 	return pos
 }
 
-func (sk *Sketch) query(pos []uint32) (min Type) {
+func (sk *Sketch) query(pos []uint32) (min CountType) {
 	min = Max
 	for i := uint32(0); i < sk.depth; i++ {
 		v := sk.count[i][pos[i]]
