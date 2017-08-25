@@ -3,9 +3,8 @@ package sketch
 import (
 	"encoding/binary"
 	"fmt"
+	"sync"
 	"testing"
-
-	"innotechx.com/go-common/misc/random"
 )
 
 func TestWidthDepth(t *testing.T) {
@@ -58,7 +57,7 @@ func TestSketch(t *testing.T) {
 	}
 
 	sk := New(WidthDepth(1.0/float64(len(cases)), 0.001))
-	t.Log(sk.String())
+	fmt.Println(sk.String())
 	for _, c := range cases {
 		for j := CountType(0); j < c.times; j++ {
 			sk.Add(c.dat, c.cnt)
@@ -74,10 +73,37 @@ func TestSketch(t *testing.T) {
 	}
 }
 
+func TestRace(t *testing.T) {
+	sk := New(WidthDepth(0.0001, 0.001))
+	fmt.Println(sk.String())
+
+	var wg sync.WaitGroup
+	for g := 0; g < 100; g++ {
+		wg.Add(2)
+		go func() {
+			bs := make([]byte, 8)
+			for i := 0; i < 10000; i++ {
+				binary.BigEndian.PutUint64(bs, uint64(i)*65537)
+				sk.Incr(bs)
+			}
+			wg.Done()
+		}()
+		go func() {
+			bs := make([]byte, 8)
+			for i := 0; i < 10000; i++ {
+				binary.BigEndian.PutUint64(bs, uint64(i)*65537)
+				sk.Query(bs)
+			}
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+}
+
 const nsample = 7e6
 
 func TestErrors(t *testing.T) {
-	sk := New(WidthDepth(0.7/7e6, 0.001))
+	sk := New(WidthDepth(0.8/nsample, 0.001))
 	fmt.Println(sk.String())
 	bs := make([]byte, 4)
 	for i := uint32(0); i < nsample; i++ {
@@ -102,9 +128,10 @@ func TestErrors(t *testing.T) {
 func BenchmarkIncr(b *testing.B) {
 	sk := New(WidthDepth(1.0/nsample, 0.001))
 	b.Log(sk.String())
+	bs := make([]byte, 8)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		bs := random.Bytes(16)
+		binary.BigEndian.PutUint64(bs, uint64(i)*65537)
 		sk.Incr(bs)
 	}
 }
@@ -112,13 +139,14 @@ func BenchmarkIncr(b *testing.B) {
 func BenchmarkQuery(b *testing.B) {
 	sk := New(WidthDepth(1.0/nsample, 0.001))
 	b.Log(sk.String())
+	bs := make([]byte, 8)
 	for i := 0; i < b.N; i++ {
-		bs := random.Bytes(16)
+		binary.BigEndian.PutUint64(bs, uint64(i)*65537)
 		sk.Incr(bs)
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		bs := random.Bytes(16)
+		binary.BigEndian.PutUint64(bs, uint64(i)*65537)
 		sk.Query(bs)
 	}
 }

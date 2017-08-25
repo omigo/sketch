@@ -3,9 +3,9 @@ package sketch
 import (
 	"fmt"
 	"math"
+	"sync"
 	"unsafe"
 
-	"github.com/arstd/log"
 	"github.com/spaolacci/murmur3"
 )
 
@@ -17,6 +17,7 @@ type Sketch struct {
 	width uint32
 	depth uint32
 	count [][]CountType
+	mutex sync.RWMutex
 }
 
 // WidthDepth returns width and depth by formula in paper.
@@ -34,11 +35,11 @@ func WidthDepth(errorRatio, uncertainty float64) (width, depth uint32) {
 		defaultUncertainty = 1.0 / 1e3 // 0.1%
 	)
 	if errorRatio < 1.0/1e9 || errorRatio > 0.1 {
-		log.Warnf("error ratio %g not in [1e-9,0.1], use default %g", errorRatio, defaultErrorRatio)
+		fmt.Printf("error ratio %g not in [1e-9,0.1], use default %g\n", errorRatio, defaultErrorRatio)
 		errorRatio = defaultErrorRatio
 	}
 	if uncertainty < 1.0/1e9 || uncertainty > 0.1 {
-		log.Warnf("certainty %g not in [1e-9,0.1], use default %g", uncertainty, defaultUncertainty)
+		fmt.Printf("certainty %g not in [1e-9,0.1], use default %g\n", uncertainty, defaultUncertainty)
 		uncertainty = defaultUncertainty
 	}
 
@@ -69,11 +70,13 @@ func (sk *Sketch) String() string {
 }
 
 func (sk *Sketch) Clear() {
+	sk.mutex.Lock()
 	for i := uint32(0); i < sk.depth; i++ {
 		for j := uint32(0); j < sk.width; j++ {
 			sk.count[i][j] = 0
 		}
 	}
+	sk.mutex.Unlock()
 }
 
 func (sk *Sketch) Incr(dat []byte) (min CountType) {
@@ -86,12 +89,14 @@ func (sk *Sketch) Add(dat []byte, cnt CountType) (min CountType) {
 
 	min += cnt
 
+	sk.mutex.Lock()
 	for i := uint32(0); i < sk.depth; i++ {
 		v := sk.count[i][pos[i]]
 		if v < min {
 			sk.count[i][pos[i]] = min
 		}
 	}
+	sk.mutex.Unlock()
 
 	return min
 }
@@ -114,11 +119,15 @@ func (sk *Sketch) positions(dat []byte) (pos []uint32) {
 
 func (sk *Sketch) query(pos []uint32) (min CountType) {
 	min = Max
+
+	sk.mutex.RLock()
 	for i := uint32(0); i < sk.depth; i++ {
 		v := sk.count[i][pos[i]]
 		if min > v {
 			min = v
 		}
 	}
+	sk.mutex.RUnlock()
+
 	return min
 }
