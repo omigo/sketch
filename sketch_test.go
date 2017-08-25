@@ -42,7 +42,7 @@ func TestSketch(t *testing.T) {
 		cnt   CountType
 		times CountType
 	}{
-		{[]byte("notfound"), 1, 0},
+		{[]byte("notfound"), 0, 0},
 		{[]byte("hello"), 1, 1},
 		{[]byte("count"), 2, 1},
 		{[]byte("min"), 2, 2},
@@ -50,13 +50,13 @@ func TestSketch(t *testing.T) {
 		{[]byte("antispam"), 3, 7},
 		{[]byte("cheatcheat"), 10, 1},
 		{[]byte("tigger"), 2, 34},
-		{[]byte("flow"), 6, 39},
-		{[]byte("miss"), 5, 81},
+		{[]byte("flow"), 6, 9},
+		{[]byte("miss"), 5, 23},
 		{[]byte("ohoh"), 3, 1},
 		{[]byte("haha"), 2, 9},
 	}
 
-	sk := New(WidthDepth(1.0/float64(len(cases)), 0.001))
+	sk := New(WidthDepth(0.01, 0.1))
 	fmt.Println(sk.String())
 	for _, c := range cases {
 		for j := CountType(0); j < c.times; j++ {
@@ -68,7 +68,7 @@ func TestSketch(t *testing.T) {
 		expected := c.cnt * c.times
 		got := sk.Query(c.dat)
 		if expected != got {
-			t.Logf("%d %s got %d, expect %d", i, c.dat, got, expected)
+			t.Logf("%d '%s' got %d, expect %d", i, c.dat, got, expected)
 		}
 	}
 }
